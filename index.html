@@ -52,6 +52,11 @@
             outline: 2px solid #3b82f6;
             background-color: #eff6ff;
         }
+        .editable[contenteditable="true"]:empty:before {
+            content: attr(placeholder);
+            color: #9ca3af;
+            font-style: italic;
+        }
         .btn {
             transition: all 0.3s ease;
         }
@@ -215,11 +220,11 @@
                         <p>NA = Nilai Akhir</p>
                     </div>
                     <div class="text-center">
-                        <p>Purnama, <div id="currentDate" contenteditable="true" class="editable inline-block min-w-[150px]"></div></p>
+                        <p>Purnama, <div id="currentDate" contenteditable="true" class="editable inline-block min-w-[150px]" placeholder="Tanggal"></div></p>
                         <p class="mt-1">Wali Kelas</p>
                         <div class="h-16"></div>
-                        <p class="font-medium underline">JUNID, S.Pd</p>
-                        <p>NIP. 19881123 202221 1 004</p>
+                        <div id="teacherName" contenteditable="true" class="editable font-medium underline min-w-[200px]" placeholder="Nama Guru"></div>
+                        <p>NIP. <div id="teacherNip" contenteditable="true" class="editable inline-block min-w-[200px]" placeholder="NIP"></div></p>
                     </div>
                 </div>
             </div>
@@ -311,6 +316,8 @@
             const semesterSelect = document.getElementById('semester');
             const classSelect = document.getElementById('class-select');
             const dateElement = document.getElementById('currentDate');
+            const teacherNameElement = document.getElementById('teacherName');
+            const teacherNipElement = document.getElementById('teacherNip');
             const studentNameInput = document.getElementById('student-name-input');
             const addStudentBtn = document.getElementById('add-student-btn');
 
@@ -351,6 +358,8 @@
                     }
 
                     dateElement.textContent = data.date || new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+                    teacherNameElement.textContent = data.teacherName || '';
+                    teacherNipElement.textContent = data.teacherNip || '';
 
                     if (data.grades) {
                         currentStudents.forEach((_, studentIndex) => {
@@ -450,12 +459,17 @@
                 }
             }
             
-            async function saveDate(value) {
+            async function saveMetadata() {
                 const docRef = getClassDataDocRef();
+                const metadata = {
+                    date: dateElement.textContent,
+                    teacherName: teacherNameElement.textContent,
+                    teacherNip: teacherNipElement.textContent
+                };
                 try {
-                    await setDoc(docRef, { date: value }, { merge: true });
+                    await setDoc(docRef, metadata, { merge: true });
                 } catch (error) {
-                    console.error("Gagal menyimpan tanggal:", error);
+                    console.error("Gagal menyimpan metadata:", error);
                 }
             }
 
@@ -520,7 +534,9 @@
             });
             
             addStudentBtn.addEventListener('click', addStudent);
-            dateElement.addEventListener('blur', (e) => saveDate(e.target.textContent));
+            dateElement.addEventListener('blur', saveMetadata);
+            teacherNameElement.addEventListener('blur', saveMetadata);
+            teacherNipElement.addEventListener('blur', saveMetadata);
             semesterSelect.addEventListener('change', initializeView);
             classSelect.addEventListener('change', initializeView);
             
