@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Daftar Nilai Kurikulum Merdeka - Kelas 4B</title>
+    <title>Daftar Nilai Kurikulum Merdeka</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -62,6 +62,15 @@
         #app-container.hidden, #loading-container.hidden {
             display: none;
         }
+        .delete-btn {
+            cursor: pointer;
+            color: #ef4444;
+            opacity: 0.5;
+            transition: opacity 0.2s;
+        }
+        .delete-btn:hover {
+            opacity: 1;
+        }
         @media print {
             .no-print {
                 display: none;
@@ -82,6 +91,13 @@
             .table-container {
                 overflow-x: visible;
             }
+            #page-title {
+                display: block !important;
+                text-align: center;
+                font-size: 1.5rem;
+                font-weight: bold;
+                margin-bottom: 1rem;
+            }
         }
     </style>
 </head>
@@ -96,6 +112,7 @@
 
     <!-- Kontainer utama aplikasi, disembunyikan secara default -->
     <div id="app-container" class="container mx-auto px-4 py-8 hidden">
+        <h1 id="page-title" class="hidden"></h1>
         <div class="bg-white shadow-lg rounded-lg overflow-hidden mb-8">
             <div class="header-gradient text-white p-6 no-print">
                 <div class="flex flex-col md:flex-row justify-between items-center">
@@ -105,15 +122,27 @@
                     </div>
                     <div class="text-right">
                         <h2 class="text-xl font-semibold">SD Negeri 008 Purnama</h2>
-                        <p class="text-lg">Kelas 4B</p>
                         <div id="statusIndicator" class="text-xs font-light mt-1 p-1 bg-white/20 rounded-full">Menyambungkan...</div>
                     </div>
                 </div>
             </div>
             
             <div class="p-6">
-                <div class="flex flex-wrap justify-between items-center mb-6 no-print">
-                    <div class="w-full md:w-auto mb-4 md:mb-0">
+                <div class="flex flex-wrap justify-between items-center mb-6 no-print gap-4">
+                    <div class="flex flex-wrap gap-4 items-center">
+                         <div class="flex items-center">
+                            <label for="class-select" class="mr-2 font-medium">Kelas:</label>
+                            <select id="class-select" class="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="3A">3A</option>
+                                <option value="3B">3B</option>
+                                <option value="3C">3C</option>
+                                <option value="3D">3D</option>
+                                <option value="4A">4A</option>
+                                <option value="4B" selected>4B</option>
+                                <option value="4C">4C</option>
+                                <option value="4D">4D</option>
+                            </select>
+                        </div>
                         <div class="flex items-center">
                             <label for="semester" class="mr-2 font-medium">Semester:</label>
                             <select id="semester" class="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -137,6 +166,18 @@
                         </button>
                     </div>
                 </div>
+                 <div id="add-student-container" class="mb-6 no-print">
+                    <label for="student-name-input" class="font-medium">Tambah Siswa Baru:</label>
+                    <div class="flex gap-2 mt-1">
+                        <input type="text" id="student-name-input" placeholder="Masukkan nama siswa" class="flex-grow border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <button id="add-student-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded flex items-center btn">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                              <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
+                            </svg>
+                            Tambah
+                        </button>
+                    </div>
+                </div>
                 
                 <div class="table-container">
                     <table id="gradeTable" class="min-w-full">
@@ -150,6 +191,7 @@
                                 <th colspan="7">IPAS</th>
                                 <th colspan="7">Seni Rupa</th>
                                 <th rowspan="2" class="align-middle">Rata-rata</th>
+                                <th rowspan="2" class="align-middle no-print">Aksi</th>
                             </tr>
                             <tr>
                                 <!-- Sub-headers for each subject -->
@@ -174,7 +216,7 @@
                     </div>
                     <div class="text-center">
                         <p>Purnama, <div id="currentDate" contenteditable="true" class="editable inline-block min-w-[150px]"></div></p>
-                        <p class="mt-1">Wali Kelas 4B</p>
+                        <p class="mt-1">Wali Kelas</p>
                         <div class="h-16"></div>
                         <p class="font-medium underline">JUNID, S.Pd</p>
                         <p>NIP. 19881123 202221 1 004</p>
@@ -188,20 +230,18 @@
         // Import fungsi yang diperlukan dari Firebase SDK
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, onSnapshot, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // Elemen UI
         const loadingContainer = document.getElementById('loading-container');
         const appContainer = document.getElementById('app-container');
         const statusIndicator = document.getElementById('statusIndicator');
 
-        // Fungsi untuk menampilkan UI utama
         function showApp() {
             loadingContainer.classList.add('hidden');
             appContainer.classList.remove('hidden');
         }
 
-        // Fungsi untuk menampilkan pesan error
         function showError(title, subtitle) {
             document.getElementById('loading-title').textContent = title;
             document.getElementById('loading-subtitle').textContent = subtitle;
@@ -209,18 +249,14 @@
             appContainer.classList.add('hidden');
         }
 
-        // Penangan error global untuk menangkap kesalahan tak terduga
         window.onerror = function(message, source, lineno, colno, error) {
             console.error("Kesalahan Global Tertangkap:", { message, source, lineno, colno, error });
             showError("Terjadi Kesalahan Tak Terduga", "Aplikasi tidak dapat dimuat. Silakan periksa konsol untuk detail.");
             return true;
         };
 
-        // Fungsi utama untuk memulai aplikasi
         async function main() {
             try {
-                // 1. Konfigurasi dan Inisialisasi Firebase
-                // PENTING: Pastikan Otentikasi Anonim diaktifkan di Firebase Console Anda
                 const firebaseConfig = {
                     apiKey: "AIzaSyDKGi9dPJb7LBc7W_Xzmlb9_cPtasfSzZc",
                     authDomain: "daftar-nilai-bcc32.firebaseapp.com",
@@ -233,24 +269,15 @@
                 const app = initializeApp(firebaseConfig);
                 const auth = getAuth(app);
                 const db = getFirestore(app);
-                console.log("Firebase berhasil diinisialisasi dengan konfigurasi Anda.");
 
-                // 2. Otentikasi Pengguna (Anonim)
-                if (!auth.currentUser) {
-                    await signInAnonymously(auth);
-                }
+                if (!auth.currentUser) await signInAnonymously(auth);
                 
                 const currentUser = auth.currentUser;
-                if (!currentUser) {
-                    throw new Error("Otentikasi anonim gagal, pengguna tidak ditemukan.");
-                }
+                if (!currentUser) throw new Error("Otentikasi anonim gagal.");
                 
-                const userId = currentUser.uid;
-                console.log("Otentikasi berhasil. User ID:", userId);
                 statusIndicator.textContent = "Terhubung";
                 statusIndicator.style.backgroundColor = '#22c55e';
 
-                // 3. Setup dan Tampilkan Aplikasi
                 setupApplication(db);
                 showApp();
 
@@ -268,7 +295,7 @@
         }
 
         function setupApplication(db) {
-            const students = [
+            const defaultStudents4B = [
                 "AFIF AWAL SAID", "AIDA D'MY TREE RAMADANI", "AINI INDAH PUTRI", "ANANDA DZAKIRA",
                 "ARYA REVAL DYANSYAH", "ASHYFA MEYLANI", "AYUNA ADELIA LAILANI", "AMANDA ADRILIA",
                 "AZKA IRVI ANANDA", "CHANDRA JUNDY PRATAMA", "DEBBY QEISYA ATHIYA", "AFANDHA FAJRUL IKHSAN",
@@ -277,82 +304,99 @@
                 "NUR KHUSNIA MU'MINA", "NUR SAKHIRA", "ABDIS PERMADI", "RASYID AKMAL AZKA",
                 "RIFAYA ANANDA", "YUDHA ALVARO"
             ];
-
+            
+            let currentStudents = [];
+            let unsubscribe;
             const tableBody = document.querySelector('#gradeTable tbody');
             const semesterSelect = document.getElementById('semester');
+            const classSelect = document.getElementById('class-select');
             const dateElement = document.getElementById('currentDate');
-            let unsubscribeListeners = [];
+            const studentNameInput = document.getElementById('student-name-input');
+            const addStudentBtn = document.getElementById('add-student-btn');
 
-            function getCollectionPath(subpath = '') {
-                return `gradebooks/Kelas4B/semester_${semesterSelect.value}` + (subpath ? `/${subpath}` : '');
+            function getClassDataDocRef() {
+                const className = classSelect.value;
+                const semester = semesterSelect.value;
+                const docId = `${className}_${semester}`;
+                return doc(db, "gradebooks", docId);
             }
 
-            function initializeTable() {
+            async function initializeView() {
+                if (unsubscribe) unsubscribe();
+
+                const docRef = getClassDataDocRef();
+                
+                unsubscribe = onSnapshot(docRef, (docSnap) => {
+                    let data = {};
+                    if (docSnap.exists()) {
+                        data = docSnap.data();
+                    }
+
+                    let studentListChanged = false;
+                    let newStudentList = [];
+
+                    if (data.students && data.students.length > 0) {
+                        newStudentList = data.students;
+                    } else if (classSelect.value === '4B') {
+                        newStudentList = [...defaultStudents4B];
+                    }
+
+                    if (JSON.stringify(newStudentList) !== JSON.stringify(currentStudents)) {
+                        currentStudents = newStudentList;
+                        studentListChanged = true;
+                    }
+                    
+                    if (studentListChanged) {
+                        renderTable();
+                    }
+
+                    dateElement.textContent = data.date || new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+                    if (data.grades) {
+                        currentStudents.forEach((_, studentIndex) => {
+                            const studentGrades = data.grades[`student_${studentIndex}`] || {};
+                            const row = tableBody.querySelector(`[data-row-index="${studentIndex}"]`);
+                            if (row) {
+                                Object.entries(studentGrades).forEach(([key, value]) => {
+                                    const match = key.match(/s(\d+)_t(.+)/);
+                                    if (match) {
+                                        const [_, subject, type] = match;
+                                        const cell = row.querySelector(`[data-subject="${subject}"][data-type="${type}"]`);
+                                        if (cell && cell.textContent !== value) cell.textContent = value;
+                                    }
+                                });
+                            }
+                        });
+                    }
+                    recalculateAllGrades();
+                });
+            }
+
+            function renderTable() {
                 tableBody.innerHTML = '';
-                students.forEach((student, index) => {
+                currentStudents.forEach((student, index) => {
                     const row = document.createElement('tr');
                     row.dataset.rowIndex = index;
-                    row.innerHTML = `<td>${index + 1}</td><td class="text-left font-medium">${student}</td>`;
-                    let cells = '';
-                    for (let subjectIndex = 0; subjectIndex < 5; subjectIndex++) {
-                        for (let p = 1; p <= 6; p++) {
-                            cells += `<td><div contenteditable="true" class="editable" data-subject="${subjectIndex}" data-type="p${p}"></div></td>`;
-                        }
-                        cells += `<td><div class="font-medium bg-blue-50" data-na="${subjectIndex}"></div></td>`;
-                    }
-                    cells += `<td class="font-medium bg-yellow-50" data-average></td>`;
-                    row.innerHTML += cells;
+                    row.innerHTML = `
+                        <td>${index + 1}</td>
+                        <td class="text-left font-medium">${student}</td>
+                        ${Array(5).fill(0).map((_, subjectIndex) => `
+                            ${Array(6).fill(0).map((_, pIndex) => `<td><div contenteditable="true" class="editable" data-subject="${subjectIndex}" data-type="p${pIndex+1}"></div></td>`).join('')}
+                            <td><div class="font-medium bg-blue-50" data-na="${subjectIndex}"></div></td>
+                        `).join('')}
+                        <td class="font-medium bg-yellow-50" data-average></td>
+                        <td class="no-print">
+                            <svg class="delete-btn h-5 w-5 mx-auto" data-student-index="${index}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" />
+                            </svg>
+                        </td>
+                    `;
                     tableBody.appendChild(row);
                 });
-                listenForData();
-            }
-
-            function listenForData() {
-                unsubscribeListeners.forEach(unsub => unsub());
-                unsubscribeListeners = [];
-
-                const collectionPath = getCollectionPath();
-                const gradesCollectionRef = collection(db, collectionPath);
-
-                const unsubGrades = onSnapshot(gradesCollectionRef, (snapshot) => {
-                    snapshot.forEach(doc => {
-                        if (doc.id === 'metadata') return;
-                        const studentIndex = parseInt(doc.id.replace('student_', ''));
-                        const studentData = doc.data();
-                        const row = tableBody.querySelector(`[data-row-index="${studentIndex}"]`);
-                        if (row && studentData.grades) {
-                            Object.entries(studentData.grades).forEach(([key, value]) => {
-                                const match = key.match(/s(\d+)_t(.+)/);
-                                if (match) {
-                                    const [_, subject, type] = match;
-                                    const cell = row.querySelector(`[data-subject="${subject}"][data-type="${type}"]`);
-                                    if (cell && cell.textContent !== value) {
-                                        cell.textContent = value;
-                                    }
-                                }
-                            });
-                        }
-                    });
-                    recalculateAllGrades();
-                }, (error) => {
-                    console.error("Error saat mengambil data nilai:", error);
-                    showError("Gagal membaca data dari database.", error.message);
-                });
-                unsubscribeListeners.push(unsubGrades);
-
-                const metadataDocRef = doc(db, collectionPath, 'metadata');
-                const unsubMeta = onSnapshot(metadataDocRef, (doc) => {
-                    if (doc.exists() && doc.data().date) {
-                        dateElement.textContent = doc.data().date;
-                    } else {
-                        dateElement.textContent = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-                    }
-                });
-                unsubscribeListeners.push(unsubMeta);
             }
             
             function recalculateAllGrades() {
-                students.forEach((_, index) => {
+                currentStudents.forEach((_, index) => {
                     for (let j = 0; j < 5; j++) {
                         calculateFinalGrade(index, j);
                     }
@@ -363,14 +407,10 @@
                 const row = tableBody.rows[rowIndex];
                 if (!row) return;
                 const gradeInputs = row.querySelectorAll(`[data-subject="${subjectIndex}"][data-type^="p"]`);
-                const grades = Array.from(gradeInputs)
-                    .map(input => parseFloat(input.textContent))
-                    .filter(value => !isNaN(value));
-                
+                const grades = Array.from(gradeInputs).map(input => parseFloat(input.textContent)).filter(v => !isNaN(v));
                 const naCell = row.querySelector(`[data-na="${subjectIndex}"]`);
                 if (grades.length > 0) {
-                    const average = grades.reduce((sum, grade) => sum + grade, 0) / grades.length;
-                    naCell.textContent = average.toFixed(1);
+                    naCell.textContent = (grades.reduce((a, b) => a + b, 0) / grades.length).toFixed(1);
                 } else {
                     naCell.textContent = '';
                 }
@@ -380,15 +420,10 @@
             function calculateOverallAverage(rowIndex) {
                 const row = tableBody.rows[rowIndex];
                 if (!row) return;
-                const finalGradeCells = row.querySelectorAll('[data-na]');
-                const finalGrades = Array.from(finalGradeCells)
-                    .map(cell => parseFloat(cell.textContent))
-                    .filter(value => !isNaN(value));
-
+                const finalGrades = Array.from(row.querySelectorAll('[data-na]')).map(cell => parseFloat(cell.textContent)).filter(v => !isNaN(v));
                 const avgCell = row.querySelector('[data-average]');
                 if (finalGrades.length > 0) {
-                    const average = finalGrades.reduce((sum, grade) => sum + grade, 0) / finalGrades.length;
-                    avgCell.textContent = average.toFixed(1);
+                    avgCell.textContent = (finalGrades.reduce((a, b) => a + b, 0) / finalGrades.length).toFixed(1);
                 } else {
                     avgCell.textContent = '';
                 }
@@ -397,29 +432,73 @@
             async function saveStudentData(rowIndex) {
                 const row = tableBody.rows[rowIndex];
                 if (!row) return;
-                const studentName = row.cells[1].textContent;
-                const grades = {};
+                const studentGrades = {};
                 row.querySelectorAll('.editable[data-subject]').forEach(cell => {
                     const key = `s${cell.dataset.subject}_t${cell.dataset.type}`;
-                    if (cell.textContent.trim() !== '') {
-                        grades[key] = cell.textContent.trim();
-                    }
+                    if (cell.textContent.trim() !== '') studentGrades[key] = cell.textContent.trim();
                 });
-                const docId = `student_${rowIndex}`;
-                const docRef = doc(db, getCollectionPath(), docId);
+                const docRef = getClassDataDocRef();
+                const fieldToUpdate = `grades.student_${rowIndex}`;
                 try {
-                    await setDoc(docRef, { name: studentName, grades: grades }, { merge: true });
+                    await updateDoc(docRef, { [fieldToUpdate]: studentGrades });
                 } catch (error) {
-                    console.error(`Gagal menyimpan data untuk siswa baris ${rowIndex}:`, error);
+                     if (error.code === 'not-found') {
+                        await setDoc(docRef, { grades: { [`student_${rowIndex}`]: studentGrades } }, { merge: true });
+                    } else {
+                        console.error(`Gagal menyimpan data untuk siswa baris ${rowIndex}:`, error);
+                    }
                 }
             }
             
             async function saveDate(value) {
-                const docRef = doc(db, getCollectionPath(), 'metadata');
+                const docRef = getClassDataDocRef();
                 try {
                     await setDoc(docRef, { date: value }, { merge: true });
                 } catch (error) {
                     console.error("Gagal menyimpan tanggal:", error);
+                }
+            }
+
+            async function saveStudentList(newList) {
+                const docRef = getClassDataDocRef();
+                try {
+                    await setDoc(docRef, { students: newList }, { merge: true });
+                } catch (error) {
+                    console.error("Gagal menyimpan daftar siswa:", error);
+                }
+            }
+
+            async function addStudent() {
+                const name = studentNameInput.value.trim().toUpperCase();
+                if (name && !currentStudents.includes(name)) {
+                    const newList = [...currentStudents, name];
+                    await saveStudentList(newList);
+                    studentNameInput.value = '';
+                }
+            }
+
+            async function deleteStudent(index) {
+                if (!confirm(`Apakah Anda yakin ingin menghapus siswa "${currentStudents[index]}"? Semua nilai siswa ini akan dihapus.`)) return;
+                
+                const docRef = getClassDataDocRef();
+                const docSnap = await getDoc(docRef);
+                if (!docSnap.exists()) return;
+
+                const data = docSnap.data();
+                const newList = data.students.filter((_, i) => i !== index);
+                const newGrades = {};
+                
+                newList.forEach((studentName, newIndex) => {
+                    const oldIndex = data.students.indexOf(studentName);
+                    if(data.grades && data.grades[`student_${oldIndex}`]) {
+                        newGrades[`student_${newIndex}`] = data.grades[`student_${oldIndex}`];
+                    }
+                });
+
+                try {
+                    await setDoc(docRef, { students: newList, grades: newGrades });
+                } catch (error) {
+                    console.error("Gagal menghapus siswa:", error);
                 }
             }
 
@@ -431,25 +510,42 @@
                     saveStudentData(rowIndex);
                 }
             }, true);
+
+            tableBody.addEventListener('click', (e) => {
+                const btn = e.target.closest('.delete-btn');
+                if (btn) {
+                    const studentIndex = parseInt(btn.dataset.studentIndex);
+                    deleteStudent(studentIndex);
+                }
+            });
             
+            addStudentBtn.addEventListener('click', addStudent);
             dateElement.addEventListener('blur', (e) => saveDate(e.target.textContent));
-            semesterSelect.addEventListener('change', initializeTable);
-            document.getElementById('printBtn').addEventListener('click', () => window.print());
+            semesterSelect.addEventListener('change', initializeView);
+            classSelect.addEventListener('change', initializeView);
+            
+            document.getElementById('printBtn').addEventListener('click', () => {
+                const className = classSelect.options[classSelect.selectedIndex].text;
+                const semester = semesterSelect.value;
+                document.getElementById('page-title').textContent = `Daftar Nilai Kelas ${className} - Semester ${semester}`;
+                window.print();
+            });
+            
             document.getElementById('exportBtn').addEventListener('click', function() {
                 let tableHTML = document.getElementById('gradeTable').outerHTML;
-                tableHTML = tableHTML.replace(/<div contenteditable="true"[^>]*>/g, '').replace(/<\/div/g, '');
+                tableHTML = tableHTML.replace(/<th[^>]*>Aksi<\/th>/, '').replace(/<td[^>]*><svg[^>]*>.*?<\/svg><\/td>/g, '');
                 const blob = new Blob([tableHTML], { type: 'application/vnd.ms-excel' });
+                const className = classSelect.options[classSelect.selectedIndex].text;
+                const semester = semesterSelect.value;
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(blob);
-                link.download = `Nilai_Kelas_4B_Semester_${semesterSelect.value}.xls`;
+                link.download = `Nilai_Kelas_${className}_Semester_${semester}.xls`;
                 link.click();
             });
 
-            // Inisialisasi awal
-            initializeTable();
+            initializeView();
         }
 
-        // Menjalankan fungsi utama saat DOM siap
         document.addEventListener('DOMContentLoaded', main);
     </script>
 </body>
